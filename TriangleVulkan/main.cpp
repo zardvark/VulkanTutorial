@@ -72,6 +72,9 @@ class HelloTriangleApp
         VkQueue graphicsQueue;
         VkQueue presentQueue;
         VkSwapchainKHR swapChain;
+        std::vector<VkImage> swapChainImages;
+        VkFormat swapChainImageFormat;
+        VkExtent2D swapChainExtent;
 
 		void initWindow() 
         {
@@ -354,6 +357,7 @@ class HelloTriangleApp
             uint32_t formatCount;
             uint32_t presentModeCount;
             SwapChainSupportDetails details;
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
             vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
             vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
             if (formatCount != 0) {
@@ -442,6 +446,11 @@ class HelloTriangleApp
             if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
                 throw new std::runtime_error("failure to create swapchain");
             }
+            vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+            swapChainImages.resize(imageCount);
+            vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+            swapChainImageFormat = surfaceFormat.format;
+            swapChainExtent = extent;
         }
 };
 
