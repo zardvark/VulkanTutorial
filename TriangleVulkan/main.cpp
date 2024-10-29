@@ -100,22 +100,22 @@ class HelloTriangleApp
 
         void createLogicalDevice()
         {
-            QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
             std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+            QueueFamilyIndices indices = findQueueFamilies(physicalDevice); 
             std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
             float queuePriority = 1.0f;
             for (uint32_t uniqueQueueFamily : uniqueQueueFamilies) {
                 VkDeviceQueueCreateInfo queueCreateInfo{};
                 queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+                queueCreateInfo.queueFamilyIndex = uniqueQueueFamily;
                 queueCreateInfo.queueCount = 1;
                 queueCreateInfo.pQueuePriorities = &queuePriority;
                 queueCreateInfos.push_back(queueCreateInfo);
             }
             VkDeviceCreateInfo createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
             createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
             createInfo.pQueueCreateInfos = queueCreateInfos.data();
-            createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
             createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
             createInfo.ppEnabledExtensionNames = deviceExtensions.data();
             VkPhysicalDeviceFeatures deviceFeatures{};
@@ -206,6 +206,8 @@ class HelloTriangleApp
             if (enableValidationLayers && !checkValidationLayerSupport()) {
                 throw std::runtime_error("no validation layers");
             }
+            
+            /* Optional info for optimization */
             VkApplicationInfo appInfo{};
             appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
             appInfo.pApplicationName = "Hello Triangle";
@@ -214,6 +216,8 @@ class HelloTriangleApp
             appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
             appInfo.apiVersion = VK_API_VERSION_1_0;
 
+
+            /* Where extensions and validation layers throughout whole program are set */
             VkInstanceCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
             createInfo.pApplicationInfo = &appInfo;
@@ -318,19 +322,18 @@ class HelloTriangleApp
             }
         };
 
-
         // VK_QUEUE_GRAPHICS_BIT = 0x0001
         // When running we get 7 = 0x0111
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
             uint32_t queueFamilyCount = 0;
             QueueFamilyIndices indices;
-            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr); //gets queueFamilyCount on device (only 1 on this one)
+            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount); // makes a vector for all the queueFamilies
             vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
             int i = 0;
             VkBool32 presentSupport = false;
             for (const auto& queueFamily : queueFamilies) {
-                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+                vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport); // checks if queue family index i has presentation support
                 if (presentSupport) {
                     indices.presentFamily = i;
                 }
@@ -491,6 +494,37 @@ class HelloTriangleApp
             auto fragShaderCode = readFile("shaders/frag.spv");
             VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
             VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+            VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+            vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+            vertShaderStageInfo.module = vertShaderModule;
+            vertShaderStageInfo.pName = "main";
+            VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+            vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            vertShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+            vertShaderStageInfo.module = fragShaderModule;
+            vertShaderStageInfo.pName = "main";
+            VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+            /* std::vector<VkDynamicState> dynamicStates = { */
+            /*     VK_DYNAMIC_STATE_VIEWPORT, */
+            /*     VK_DYNAMIC_STATE_SCISSOR */
+            /* }; */
+            /* VkPipelineDynamicStateCreateInfo dynamicState{}; */
+            /* dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO; */
+            /* dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()); */
+            /* dynamicState.pDynamicStates = dynamicStates.data(); */
+            VkPipelineVertexInputStateCreateInfo vertexInputInfo; //describes format of vertex data passed to vertex shader
+            vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+            vertexInputInfo.vertexBindingDescriptionCount = 0;
+            vertexInputInfo.pVertexBindingDescriptions = nullptr;
+            vertexInputInfo.vertexAttributeDescriptionCount = 0;
+            vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+            VkPipelineInputAssemblyStateCreateInfo inputAssembly{}; //what kind of geometry's drawn from vertices and if primitive restart's enabled.
+            inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+            inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            inputAssembly.primitiveRestartEnable = VK_FALSE; // if true, can break up lines and triangles
+
+
             vkDestroyShaderModule(device, fragShaderModule, nullptr);
             vkDestroyShaderModule(device, vertShaderModule, nullptr);
         }
